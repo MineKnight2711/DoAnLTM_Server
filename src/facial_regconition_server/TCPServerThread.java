@@ -13,10 +13,9 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Base64;
-import java.util.List;
-import java.util.Scanner;
 import model.Account;
 import model.OperationJson;
+import utils.EncodeDecode;
 
 
 /**
@@ -44,27 +43,50 @@ public class TCPServerThread extends Thread {
             OperationJson receivedJson = gson.fromJson(in.readLine(), OperationJson.class);
 
             if (receivedJson != null && receivedJson.getOperation() != null) {
-                if (receivedJson.getOperation().equals("create")) {
-                    String receiveAccount = receivedJson.getData().toString();
-                    String response = createNewUser(receiveAccount);
-                    out.println(response);
-                } else if (receivedJson.getOperation().startsWith("save-image/")) {
-                    String[] operationParts = receivedJson.getOperation().split("/");
-                    if (operationParts.length == 2) {
-                        String imageType = operationParts[1]; 
-                        byte[] receiveImage = Base64.getDecoder().decode(receivedJson.getData().toString());
-                        String response = saveImage(imageType, receiveImage);
-                        out.println(response);
-                    } else {
-                        // Handle invalid save-image operation
-                        out.println("Invalid save-image operation");
-                    }
-                } else {
-                    // Handle unsupported operation
-                    out.println("Unsupported operation");
+                String operation = receivedJson.getOperation();
+                String data = receivedJson.getData().toString();
+                switch (operation) {
+                    case "create":
+                        String responseCreate = createNewUser(data);
+                        out.println(responseCreate);
+                        break;
+                    case "update":
+                        String decodedDataUpdate = EncodeDecode.decodeBase64FromJson(data);
+                        System.out.println("Dữ liệu mã hoá :" + data);
+                        System.out.println(decodedDataUpdate);
+                        String responseUpdate = updateAccount(decodedDataUpdate);
+                        out.println(responseUpdate);
+                        break;
+                    default:
+                        if (operation.startsWith("save-image/")) {
+                            String[] operationParts = operation.split("/");
+                            if (operationParts.length == 2) {
+                                String accountID = operationParts[1];
+                                byte[] receiveImage = Base64.getDecoder().decode(data);
+                                String responseImage = saveImage(accountID, receiveImage);
+                                out.println(responseImage);
+                            } else {
+                                out.println("Account not found");
+                            }
+                        } else if (operation.contains("login")) {
+                            String[] operationParts = operation.split("/");
+                            if (operationParts.length == 2) {
+                                System.out.println("Tài khoản nhận :" + operationParts[1] + "\nMật khẩu nhận :" + data);
+                                String account = operationParts[1];
+                                String decodePassword = EncodeDecode.decodeBase64FromJson(data);
+                                String responseLogin = login(account, decodePassword);
+                                out.println(responseLogin);
+                            } else {
+                                out.println("Account not found");
+                            }
+                        } else {
+                            //Sai operation
+                            out.println("Unsupported operation");
+                        }
+                        break;
                 }
             } else {
-                // Handle invalid or incomplete JSON data
+                // Dữ liệu JSOn không hợp lệ
                 out.println("Invalid JSON data");
             }
         } catch (IOException e) {
@@ -78,9 +100,37 @@ public class TCPServerThread extends Thread {
             }
         }
     }
+    
     private String saveImage(String accountID,byte[] image){
         imageCRUD.saveImage(accountID, image);
         return "Success";
+    }
+    private String login(String account,String password){
+        String loginResult = accountCRUD.login(account, password);
+        OperationJson sendJson=new OperationJson();
+
+        switch (loginResult) {
+            case "Success":
+                Account acc=accountCRUD.getAccount(account);
+                sendJson.setOperation("Success");
+                String encodedAccount=EncodeDecode.encodeToBase64(gson.toJson(acc));
+                sendJson.setData(encodedAccount);
+                break;
+            case "WrongPass":
+                sendJson.setOperation("WrongPass");
+//                encodedResult = EncodeDecode.encodeToBase64("WrongPass");
+                break;
+            case "AccountNotFound":
+                sendJson.setOperation("AccountNotFound");
+//                encodedResult = EncodeDecode.encodeToBase64("AccountNotFound");
+                break;
+            default:
+                sendJson.setOperation("Unknown");
+//                encodedResult = EncodeDecode.encodeToBase64("Unknown");
+                break;
+        }
+
+        return gson.toJson(sendJson);   
     }
     private String createNewUser(String data){
         try {
@@ -99,6 +149,25 @@ public class TCPServerThread extends Thread {
         } catch (JsonSyntaxException e) {
             System.out.println("Lỗi định dạng ngày"+e.toString());
             return "DateTimeFormat";
+        }
+    }
+
+    private String updateAccount(String account) {
+        try {
+//            System.out.println(data);
+            Account receivedAccount=gson.fromJson(account, Account.class);
+            java.sql.Date birthday = new java.sql.Date(receivedAccount.getBrithday().getTime());
+            receivedAccount.setBrithday(birthday);
+            if(accountCRUD.updateInfo(receivedAccount))
+            {
+                return EncodeDecode.encodeToBase64("Success");
+            }
+            else
+            {
+                return EncodeDecode.encodeToBase64("UpdateFail");
+            }
+        } catch (JsonSyntaxException e) {
+            return EncodeDecode.encodeToBase64("DateTimeFormat");
         }
     }
 }
