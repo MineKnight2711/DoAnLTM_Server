@@ -104,4 +104,26 @@ public class AccountCRUD {
             return false;
         }
     }
+    public String changePassword(String accountID,String oldPass,String newPass){
+        String queryCheck = String.format("SELECT Password FROM user WHERE ID_User = '%s'" , accountID);
+        
+        try{
+                String pass;
+                PreparedStatement statement = con.prepareStatement(queryCheck);
+                ResultSet resultSet = statement.executeQuery();
+                if (resultSet.next()){
+                    pass = resultSet.getString("Password");
+                    BCrypt.Result result = BCrypt.verifyer().verify(oldPass.toCharArray(), pass);
+                    if(!result.verified){
+                        return "WrongPass";
+                    }
+                }
+                String query = String.format("UPDATE user SET Password = '%s' WHERE ID_User = '%s'" , newPass, accountID);
+                stmt.executeUpdate(query);
+                return "Success";
+            }
+            catch (HeadlessException | SQLException ex) {
+                return "Unknown";
+        }        
+    }
 }

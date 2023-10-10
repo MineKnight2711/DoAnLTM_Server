@@ -66,7 +66,7 @@ public class TCPServerThread extends Thread {
                                 String responseImage = saveImage(accountID, receiveImage);
                                 out.println(responseImage);
                             } else {
-                                out.println("Account not found");
+                                out.println(EncodeDecode.encodeToBase64("Account not found"));
                             }
                         } else if (operation.contains("login")) {
                             String[] operationParts = operation.split("/");
@@ -77,11 +77,22 @@ public class TCPServerThread extends Thread {
                                 String responseLogin = login(account, decodePassword);
                                 out.println(responseLogin);
                             } else {
-                                out.println("Account not found");
+                                out.println(EncodeDecode.encodeToBase64("Account not found"));
                             }
-                        } else {
+                        } else if(operation.startsWith("change-password/")){
+                            String[] operationParts = operation.split("/");
+                            if (operationParts.length == 2) {
+                                System.out.println("Tài khoản nhận :" + operationParts[1] + "\nDữ liệu nhận :" + data);
+                                String account = operationParts[1];
+                                String responseChangePass= changePass(account, data);
+                                out.println(responseChangePass);
+                            } else {
+                                out.println(EncodeDecode.encodeToBase64("Account not found"));
+                            }
+                        }
+                        else {
                             //Sai operation
-                            out.println("Unsupported operation");
+                            out.println(EncodeDecode.encodeToBase64("Unsupported operation"));
                         }
                         break;
                 }
@@ -168,6 +179,19 @@ public class TCPServerThread extends Thread {
             }
         } catch (JsonSyntaxException e) {
             return EncodeDecode.encodeToBase64("DateTimeFormat");
+        }
+    }
+
+    private String changePass(String account, String encodedPassword) {
+        String decodePassword = EncodeDecode.decodeBase64FromJson(encodedPassword);
+        String[] oldAndNewpass = decodePassword.split("-");
+        String result;
+        if(oldAndNewpass.length==2){
+            result=EncodeDecode.encodeToBase64(accountCRUD.changePassword(account, oldAndNewpass[0], oldAndNewpass[1]));
+            return result;
+        }
+        else{
+            return EncodeDecode.encodeToBase64("WrongOldOrNewPass"); 
         }
     }
 }
