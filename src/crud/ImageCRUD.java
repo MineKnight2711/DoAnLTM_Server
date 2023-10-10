@@ -8,7 +8,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JOptionPane;
+import model.UserImages;
 
 /**
  *
@@ -41,5 +45,33 @@ public class ImageCRUD {
             JOptionPane.showMessageDialog(null, ex);
             return false;
         }
+    }
+    public ResultSet Query(String srt){
+         try{
+             ResultSet rs=stmt.executeQuery(srt);
+             return rs;
+         }catch (SQLException ex) {
+             JOptionPane.showMessageDialog(null, ex);
+            return null ;
+        }
+    }
+    public List<UserImages> getUserImage(String userID) {
+        List<UserImages> userImages = new ArrayList<>();
+        String query = String.format("SELECT * FROM user_image WHERE ID_USER = '%s'", userID);
+        ResultSet rs = Query(query);
+        try{
+            while (rs.next()){
+                UserImages user = new UserImages();
+                user.setID_Image(rs.getString("ID_Image"));
+                user.setID_User(rs.getString("ID_User"));
+                user.setImages(rs.getBytes("Image"));
+                userImages.add(user);
+            }
+            return userImages;
+        }
+        catch(SQLException ex){
+            JOptionPane.showMessageDialog(null, ex);
+            return null ;
+        }    
     }
 }

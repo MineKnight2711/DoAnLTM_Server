@@ -13,8 +13,10 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Base64;
+import java.util.List;
 import model.Account;
 import model.OperationJson;
+import model.UserImages;
 import utils.EncodeDecode;
 
 
@@ -41,10 +43,14 @@ public class TCPServerThread extends Thread {
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
         ) {
             OperationJson receivedJson = gson.fromJson(in.readLine(), OperationJson.class);
-
+            System.out.println("JSOn nhận được :"+receivedJson.getOperation());
             if (receivedJson != null && receivedJson.getOperation() != null) {
                 String operation = receivedJson.getOperation();
-                String data = receivedJson.getData().toString();
+                System.out.println("Hàng động nhận :"+operation);
+                String data="";
+                if(receivedJson.getData()!=null){
+                    data = receivedJson.getData().toString();
+                }
                 switch (operation) {
                     case "create":
                         String responseCreate = createNewUser(data);
@@ -57,6 +63,7 @@ public class TCPServerThread extends Thread {
                         String responseUpdate = updateAccount(decodedDataUpdate);
                         out.println(responseUpdate);
                         break;
+                        
                     default:
                         if (operation.startsWith("save-image/")) {
                             String[] operationParts = operation.split("/");
@@ -84,10 +91,25 @@ public class TCPServerThread extends Thread {
                             if (operationParts.length == 2) {
                                 System.out.println("Tài khoản nhận :" + operationParts[1] + "\nDữ liệu nhận :" + data);
                                 String account = operationParts[1];
-                                String responseChangePass= changePass(account, data);
+                                String result=changePass(account, data);
+                                System.out.println("Ket qua tra ve :" + result );
+                                String responseChangePass= result;
                                 out.println(responseChangePass);
                             } else {
-                                out.println(EncodeDecode.encodeToBase64("Account not found"));
+                                System.out.println("AccountNotFound");
+                                out.println(EncodeDecode.encodeToBase64("AccountNotFound"));
+                            }
+                        }else if(operation.startsWith("load-image/")){
+                            String[] operationParts = operation.split("/");
+                            if (operationParts.length == 2) {
+                                System.out.println("Tài khoản nhận :" + operationParts[1] + "\nDữ liệu nhận :" + data);
+                                String account = operationParts[1];
+                                OperationJson result=loadImage(account);
+                                System.out.println("Ket qua tra ve :" + result.getData().toString() );
+                                out.println(gson.toJson(result));
+                            } else {
+                                System.out.println("AccountNotFound");
+                                out.println(EncodeDecode.encodeToBase64("AccountNotFound"));
                             }
                         }
                         else {
@@ -185,6 +207,7 @@ public class TCPServerThread extends Thread {
     private String changePass(String account, String encodedPassword) {
         String decodePassword = EncodeDecode.decodeBase64FromJson(encodedPassword);
         String[] oldAndNewpass = decodePassword.split("-");
+        System.out.println("Mật khẩu cũ :"+oldAndNewpass[0]+"Mật khẩu mới :"+oldAndNewpass[1]);
         String result;
         if(oldAndNewpass.length==2){
             result=EncodeDecode.encodeToBase64(accountCRUD.changePassword(account, oldAndNewpass[0], oldAndNewpass[1]));
@@ -193,5 +216,21 @@ public class TCPServerThread extends Thread {
         else{
             return EncodeDecode.encodeToBase64("WrongOldOrNewPass"); 
         }
+    }
+
+    private OperationJson loadImage(String accountID) {
+        List<UserImages> imagesList=imageCRUD.getUserImage(accountID);
+        OperationJson sendListToClientJson=new OperationJson();
+        if(!imagesList.isEmpty())
+        {
+            sendListToClientJson.setOperation("Success");
+            String encodeListToJson=gson.toJson(imagesList);
+            String encodeListToBase64=EncodeDecode.encodeToBase64(encodeListToJson);
+            
+            sendListToClientJson.setData(encodeListToBase64);
+            return sendListToClientJson;
+        }
+        sendListToClientJson.setOperation("NoImage");
+        return sendListToClientJson;
     }
 }
