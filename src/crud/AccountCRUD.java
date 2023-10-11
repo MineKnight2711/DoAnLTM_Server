@@ -14,7 +14,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import javax.swing.JOptionPane;
 import model.Account;
-import model.OperationJson;
+
 
 /**
  *

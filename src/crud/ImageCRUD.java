@@ -87,4 +87,23 @@ public class ImageCRUD {
             return null ;
         }    
     }
+    public List<UserImages> getAllUserImages() {
+        List<UserImages> allUser = new ArrayList<>();
+        String query = "SELECT * FROM user_image ORDER BY ID_User ASC";
+        ResultSet rs = Query(query);
+        try{
+            while (rs.next()){
+                UserImages user = new UserImages();
+                user.setID_Image(rs.getString("ID_Image"));
+                user.setID_User(rs.getString("ID_User"));
+                user.setImages(rs.getBytes("Image"));
+                allUser.add(user);
+            }
+            return allUser;
+        }
+        catch(Exception ex){
+            JOptionPane.showMessageDialog(null, ex);
+            return null ;
+        }    
+    }
 }

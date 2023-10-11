@@ -4,14 +4,13 @@
  */
 package facial_regconition_server;
 import com.google.gson.Gson;
-import crud.AccountCRUD;
-import crud.ImageCRUD;
+import com.google.gson.reflect.TypeToken;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Base64;
+import java.util.List;
 import model.OperationJson;
 import utils.EncodeDecode;
 
@@ -54,6 +53,9 @@ public class TCPServerThread extends Thread {
                     case "update":
                         handleUpdate(data, out);
                         break;
+                    case "regconition":
+                        handleRegconition(data, out);
+                        break;    
                     default:
                         handleOtherOperations(operation, data, out);
                         break;
@@ -108,9 +110,9 @@ public class TCPServerThread extends Thread {
     }
 
     private void handleSaveImage(String accountID, String data, PrintWriter out) {
-        byte[] receiveImage = Base64.getDecoder().decode(data);
-        String responseImage = imageThreadHandle.saveImage(accountID, receiveImage);
-        out.println(responseImage);
+        List<byte[]> receiveImages = gson.fromJson(data,new TypeToken<List<byte[]>>() {}.getType());
+        String responseImage = imageThreadHandle.saveImage(accountID, receiveImages);
+        out.println(EncodeDecode.encodeToBase64(responseImage));
     }
 
     private void handleLogin(String accountID, String data, PrintWriter out) {
@@ -138,5 +140,12 @@ public class TCPServerThread extends Thread {
         String result = imageThreadHandle.deleteImage(imageID);
         System.out.println("Ket qua tra ve :" + result);
         out.println(result);
+    }
+
+    private void handleRegconition(String data, PrintWriter out) {
+        byte[] imageReceived=gson.fromJson(data, byte[].class);
+        OperationJson result=imageThreadHandle.facialRecognition(imageReceived);
+        System.out.println("Ket qua nhan dien ::"+result.getOperation());
+        out.println(EncodeDecode.encodeToBase64(gson.toJson(result)));
     }
 }
