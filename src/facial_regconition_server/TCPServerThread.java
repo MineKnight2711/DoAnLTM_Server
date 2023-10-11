@@ -4,7 +4,6 @@
  */
 package facial_regconition_server;
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 import crud.AccountCRUD;
 import crud.ImageCRUD;
 import java.io.BufferedReader;
@@ -13,10 +12,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Base64;
-import java.util.List;
-import model.Account;
 import model.OperationJson;
-import model.UserImages;
 import utils.EncodeDecode;
 
 
@@ -26,13 +22,13 @@ import utils.EncodeDecode;
  */
 public class TCPServerThread extends Thread {
     private final Socket clientSocket;
-    private final AccountCRUD accountCRUD;
-    private final ImageCRUD imageCRUD;
+    private final AccountThreadHandle accountThreadHandle;
+    private final ImageThreadHandle imageThreadHandle;
     private final Gson gson;
     public TCPServerThread(Socket clientSocket) {
         this.clientSocket = clientSocket;
-        accountCRUD =new AccountCRUD();
-        imageCRUD=new ImageCRUD();
+        accountThreadHandle=new AccountThreadHandle();
+        imageThreadHandle=new ImageThreadHandle();
         gson=new Gson();
     }
 
@@ -44,84 +40,27 @@ public class TCPServerThread extends Thread {
         ) {
             OperationJson receivedJson = gson.fromJson(in.readLine(), OperationJson.class);
             System.out.println("JSOn nhận được :"+receivedJson.getOperation());
-            if (receivedJson != null && receivedJson.getOperation() != null) {
-                String operation = receivedJson.getOperation();
-                System.out.println("Hàng động nhận :"+operation);
-                String data="";
-                if(receivedJson.getData()!=null){
-                    data = receivedJson.getData().toString();
-                }
-                switch (operation) {
+            String operation=receivedJson.getOperation();
+        if (!operation.isEmpty()) {
+            String data="";
+            if(receivedJson.getData()!=null)
+            {
+                data=receivedJson.getData().toString();
+            }
+            switch (operation) {
                     case "create":
-                        String responseCreate = createNewUser(data);
-                        out.println(responseCreate);
+                        handleCreate(data, out);
                         break;
                     case "update":
-                        String decodedDataUpdate = EncodeDecode.decodeBase64FromJson(data);
-                        System.out.println("Dữ liệu mã hoá :" + data);
-                        System.out.println(decodedDataUpdate);
-                        String responseUpdate = updateAccount(decodedDataUpdate);
-                        out.println(responseUpdate);
+                        handleUpdate(data, out);
                         break;
-                        
                     default:
-                        if (operation.startsWith("save-image/")) {
-                            String[] operationParts = operation.split("/");
-                            if (operationParts.length == 2) {
-                                String accountID = operationParts[1];
-                                byte[] receiveImage = Base64.getDecoder().decode(data);
-                                String responseImage = saveImage(accountID, receiveImage);
-                                out.println(responseImage);
-                            } else {
-                                out.println(EncodeDecode.encodeToBase64("Account not found"));
-                            }
-                        } else if (operation.contains("login")) {
-                            String[] operationParts = operation.split("/");
-                            if (operationParts.length == 2) {
-                                System.out.println("Tài khoản nhận :" + operationParts[1] + "\nMật khẩu nhận :" + data);
-                                String account = operationParts[1];
-                                String decodePassword = EncodeDecode.decodeBase64FromJson(data);
-                                String responseLogin = login(account, decodePassword);
-                                out.println(responseLogin);
-                            } else {
-                                out.println(EncodeDecode.encodeToBase64("Account not found"));
-                            }
-                        } else if(operation.startsWith("change-password/")){
-                            String[] operationParts = operation.split("/");
-                            if (operationParts.length == 2) {
-                                System.out.println("Tài khoản nhận :" + operationParts[1] + "\nDữ liệu nhận :" + data);
-                                String account = operationParts[1];
-                                String result=changePass(account, data);
-                                System.out.println("Ket qua tra ve :" + result );
-                                String responseChangePass= result;
-                                out.println(responseChangePass);
-                            } else {
-                                System.out.println("AccountNotFound");
-                                out.println(EncodeDecode.encodeToBase64("AccountNotFound"));
-                            }
-                        }else if(operation.startsWith("load-image/")){
-                            String[] operationParts = operation.split("/");
-                            if (operationParts.length == 2) {
-                                System.out.println("Tài khoản nhận :" + operationParts[1] + "\nDữ liệu nhận :" + data);
-                                String account = operationParts[1];
-                                OperationJson result=loadImage(account);
-                                System.out.println("Ket qua tra ve :" + result.getData().toString() );
-                                out.println(gson.toJson(result));
-                            } else {
-                                System.out.println("AccountNotFound");
-                                out.println(EncodeDecode.encodeToBase64("AccountNotFound"));
-                            }
-                        }
-                        else {
-                            //Sai operation
-                            out.println(EncodeDecode.encodeToBase64("Unsupported operation"));
-                        }
+                        handleOtherOperations(operation, data, out);
                         break;
                 }
-            } else {
-                // Dữ liệu JSOn không hợp lệ
-                out.println("Invalid JSON data");
-            }
+        } else {
+            out.println("InvalidJsonData");
+        }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -133,104 +72,71 @@ public class TCPServerThread extends Thread {
             }
         }
     }
-    
-    private String saveImage(String accountID,byte[] image){
-        imageCRUD.saveImage(accountID, image);
-        return "Success";
+    private void handleCreate(String data, PrintWriter out) {
+        String responseCreate = accountThreadHandle.createNewUser(data);
+        out.println(responseCreate);
     }
-    private String login(String account,String password){
-        String loginResult = accountCRUD.login(account, password);
-        OperationJson sendJson=new OperationJson();
 
-        switch (loginResult) {
-            case "Success":
-                Account acc=accountCRUD.getAccount(account);
-                sendJson.setOperation("Success");
-                String encodedAccount=EncodeDecode.encodeToBase64(gson.toJson(acc));
-                sendJson.setData(encodedAccount);
-                break;
-            case "WrongPass":
-                sendJson.setOperation("WrongPass");
-//                encodedResult = EncodeDecode.encodeToBase64("WrongPass");
-                break;
-            case "AccountNotFound":
-                sendJson.setOperation("AccountNotFound");
-//                encodedResult = EncodeDecode.encodeToBase64("AccountNotFound");
-                break;
-            default:
-                sendJson.setOperation("Unknown");
-//                encodedResult = EncodeDecode.encodeToBase64("Unknown");
-                break;
+    private void handleUpdate(String data, PrintWriter out) {
+        String decodedDataUpdate = EncodeDecode.decodeBase64FromJson(data);
+        System.out.println("Dữ liệu mã hoá :" + data);
+        System.out.println(decodedDataUpdate);
+        String responseUpdate = accountThreadHandle.updateAccount(decodedDataUpdate);
+        out.println(responseUpdate);
+    }
+
+    private void handleOtherOperations(String operation, String data, PrintWriter out) {
+        String[] operationParts = operation.split("/");
+        if (operationParts.length != 2) {
+            out.println(EncodeDecode.encodeToBase64("Account not found"));
+            return;
         }
-
-        return gson.toJson(sendJson);   
-    }
-    private String createNewUser(String data){
-        try {
-            System.out.println(data);
-            Account receivedAccount=gson.fromJson(data, Account.class);
-            java.sql.Date birthday = new java.sql.Date(receivedAccount.getBrithday().getTime());
-            receivedAccount.setBrithday(birthday);
-            if(accountCRUD.createNewAccount(receivedAccount))
-            {
-                return "Success";
-            }
-            else
-            {
-                return "CreateAccountFail";
-            }
-        } catch (JsonSyntaxException e) {
-            System.out.println("Lỗi định dạng ngày"+e.toString());
-            return "DateTimeFormat";
+        String pathVariables = operationParts[1];
+        if (operation.startsWith("save-image/")) {
+            handleSaveImage(pathVariables, data, out);
+        } else if (operation.contains("login")) {
+            handleLogin(pathVariables, data, out);
+        } else if (operation.startsWith("change-password/")) {
+            handleChangePassword(pathVariables, data, out);
+        } else if (operation.startsWith("load-image/")) {
+            handleLoadImage(pathVariables, out);
+        } else if(operation.startsWith("delete-image/")){
+            handleDeleteImage(pathVariables, out);
+        }else {
+            out.println(EncodeDecode.encodeToBase64("UnsupportedOperation"));
         }
     }
 
-    private String updateAccount(String account) {
-        try {
-//            System.out.println(data);
-            Account receivedAccount=gson.fromJson(account, Account.class);
-            java.sql.Date birthday = new java.sql.Date(receivedAccount.getBrithday().getTime());
-            receivedAccount.setBrithday(birthday);
-            if(accountCRUD.updateInfo(receivedAccount))
-            {
-                return EncodeDecode.encodeToBase64("Success");
-            }
-            else
-            {
-                return EncodeDecode.encodeToBase64("UpdateFail");
-            }
-        } catch (JsonSyntaxException e) {
-            return EncodeDecode.encodeToBase64("DateTimeFormat");
-        }
+    private void handleSaveImage(String accountID, String data, PrintWriter out) {
+        byte[] receiveImage = Base64.getDecoder().decode(data);
+        String responseImage = imageThreadHandle.saveImage(accountID, receiveImage);
+        out.println(responseImage);
     }
 
-    private String changePass(String account, String encodedPassword) {
-        String decodePassword = EncodeDecode.decodeBase64FromJson(encodedPassword);
-        String[] oldAndNewpass = decodePassword.split("-");
-        System.out.println("Mật khẩu cũ :"+oldAndNewpass[0]+"Mật khẩu mới :"+oldAndNewpass[1]);
-        String result;
-        if(oldAndNewpass.length==2){
-            result=EncodeDecode.encodeToBase64(accountCRUD.changePassword(account, oldAndNewpass[0], oldAndNewpass[1]));
-            return result;
-        }
-        else{
-            return EncodeDecode.encodeToBase64("WrongOldOrNewPass"); 
-        }
+    private void handleLogin(String accountID, String data, PrintWriter out) {
+        System.out.println("Tài khoản nhận :" + accountID + "\nMật khẩu nhận :" + data);
+        String decodePassword = EncodeDecode.decodeBase64FromJson(data);
+        String responseLogin = accountThreadHandle.login(accountID, decodePassword);
+        out.println(responseLogin);
     }
 
-    private OperationJson loadImage(String accountID) {
-        List<UserImages> imagesList=imageCRUD.getUserImage(accountID);
-        OperationJson sendListToClientJson=new OperationJson();
-        if(!imagesList.isEmpty())
-        {
-            sendListToClientJson.setOperation("Success");
-            String encodeListToJson=gson.toJson(imagesList);
-            String encodeListToBase64=EncodeDecode.encodeToBase64(encodeListToJson);
-            
-            sendListToClientJson.setData(encodeListToBase64);
-            return sendListToClientJson;
-        }
-        sendListToClientJson.setOperation("NoImage");
-        return sendListToClientJson;
+    private void handleChangePassword(String accountID, String data, PrintWriter out) {
+        System.out.println("Tài khoản nhận :" + accountID + "\nDữ liệu nhận :" + data);
+        String result = accountThreadHandle.changePass(accountID, data);
+        System.out.println("Ket qua tra ve :" + result);
+        out.println(result);
+    }
+
+    private void handleLoadImage(String accountID, PrintWriter out) {
+        System.out.println("Tài khoản nhận :" + accountID);
+        OperationJson result = imageThreadHandle.loadImage(accountID);
+        System.out.println("Ket qua tra ve :" + result.getData().toString());
+        out.println(gson.toJson(result));
+    }
+    private void handleDeleteImage(String imageID, PrintWriter out) {
+        System.out.println("ID ảnh :" + imageID);
+        String result = imageThreadHandle.deleteImage(imageID);
+        System.out.println("Ket qua tra ve :" + result);
+        out.println(result);
     }
 }

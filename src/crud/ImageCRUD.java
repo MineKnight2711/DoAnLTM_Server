@@ -55,6 +55,19 @@ public class ImageCRUD {
             return null ;
         }
     }
+    public boolean deleteUserImage(String idImage){
+        String query = "DELETE FROM user_image WHERE ID_Image = ?";
+        try(PreparedStatement statement = con.prepareStatement(query)){
+            statement.setString(1, idImage);
+            statement.executeUpdate();
+            return true;
+        }
+        catch(SQLException ex){
+            JOptionPane.showConfirmDialog(null, ex);
+            return false;
+        }
+    }
+    
     public List<UserImages> getUserImage(String userID) {
         List<UserImages> userImages = new ArrayList<>();
         String query = String.format("SELECT * FROM user_image WHERE ID_USER = '%s'", userID);
