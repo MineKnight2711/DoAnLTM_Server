@@ -90,7 +90,7 @@ public class ImageThreadHandle {
                 // Compare the similarity of the captured face and user image
                 double similarity = compareImages(imageCapture, image);                
                 // Định mức so sánh
-                double threshold = 0.9;
+                double threshold = 0.88;
                 if( max == 0){
                     max = similarity;
                     dataFace = userImage.getImages();
