@@ -5,6 +5,7 @@
 package facial_regconition_server;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import crud.AccountCRUD;
 import model.Account;
@@ -20,7 +21,7 @@ public class AccountThreadHandle {
     private final AccountCRUD accountCRUD;
 
     public AccountThreadHandle() {
-        this.gson = new Gson();
+        this.gson = new GsonBuilder().setDateFormat("MMM d, yyyy").create();
         this.accountCRUD = new AccountCRUD();
     }
     
@@ -52,22 +53,33 @@ public class AccountThreadHandle {
         return gson.toJson(sendJson);   
     }
     public String createNewUser(String data){
+        OperationJson sendJson=new OperationJson();
         try {
             System.out.println(data);
-            Account receivedAccount=gson.fromJson(data, Account.class);
+            String decodeRequest=EncodeDecode.decodeBase64FromJson(data);
+            Account receivedAccount=gson.fromJson(decodeRequest, Account.class);
             java.sql.Date birthday = new java.sql.Date(receivedAccount.getBrithday().getTime());
             receivedAccount.setBrithday(birthday);
             if(accountCRUD.createNewAccount(receivedAccount))
             {
-                return "Success";
+                Account getAccount=accountCRUD.getAccount(receivedAccount.getAccount());
+                if(getAccount!=null){
+                    sendJson.setOperation("Success");
+                    sendJson.setData(gson.toJson(getAccount));
+                    return EncodeDecode.encodeToBase64(gson.toJson(sendJson));
+                }
+                sendJson.setOperation("AccountNotFound");
+                return EncodeDecode.encodeToBase64(gson.toJson(sendJson));
             }
             else
             {
-                return "CreateAccountFail";
+                sendJson.setOperation("CreateAccountFail");
+                return EncodeDecode.encodeToBase64(gson.toJson(sendJson));
             }
         } catch (JsonSyntaxException e) {
             System.out.println("Lỗi định dạng ngày"+e.toString());
-            return "DateTimeFormat";
+            sendJson.setOperation("DateTimeFormat");
+            return EncodeDecode.encodeToBase64(gson.toJson(sendJson));
         }
     }
 
