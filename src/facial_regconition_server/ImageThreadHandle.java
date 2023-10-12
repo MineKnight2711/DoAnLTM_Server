@@ -5,8 +5,10 @@
 package facial_regconition_server;
 
 import com.google.gson.Gson;
+import crud.AccountCRUD;
 import crud.ImageCRUD;
 import java.util.List;
+import model.Account;
 import model.OperationJson;
 import model.UserImages;
 import utils.EncodeDecode;
@@ -27,10 +29,12 @@ import org.opencv.objdetect.CascadeClassifier;
 public class ImageThreadHandle {
     private final ImageCRUD imageCRUD;
     private final Gson gson;
+    private AccountCRUD acc;
 
     public ImageThreadHandle() {
         this.imageCRUD = new ImageCRUD();
-        gson=new Gson();
+        gson = new Gson();
+        acc = new AccountCRUD();
     }
     
     
@@ -73,73 +77,45 @@ public class ImageThreadHandle {
     }
     public OperationJson facialRecognition(byte[] imageCapture) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        byte[] faces = detctFace(imageCapture);
+        byte[] dataFace = null;
         OperationJson resultJson=new OperationJson();
         // Check if a face is detected
-        if (faces != null) {  
+        if (imageCapture != null) {  
             double max = 0;
             List<UserImages> allUserImages = imageCRUD.getAllUserImages();            
             // Compare the captured face with all user images
-            for (UserImages userImage : allUserImages) {
+            for (UserImages userImage : allUserImages) {                
                 // Convert the user image to a matrix
                 byte[] image = userImage.getImages();
                 // Compare the similarity of the captured face and user image
-                double similarity = compareImages(faces, image);
-                resultJson.setData(sendDetectDisplayToClient(faces, image, similarity));
+                double similarity = compareImages(imageCapture, image);                
                 // Định mức so sánh
                 double threshold = 0.9;
-                if( max == 0)
+                if( max == 0){
                     max = similarity;
-                else if(similarity > max)
+                    dataFace = userImage.getImages();
+                }                    
+                else if(similarity > max){
                     max = similarity;
+                    Account account = acc.getUser(userImage.getID_User());
+                    dataFace = userImage.getImages();
+                    
+                }                    
                 // Check if the similarity is above the threshold
                 if (similarity >= threshold) {
+                    resultJson.setData(sendDetectDisplayToClient(imageCapture, image, similarity));
                     resultJson.setOperation("Detected");
                     return resultJson;
                 }
             }      
+            resultJson.setData(sendDetectDisplayToClient(imageCapture, dataFace, max));
             resultJson.setOperation("NotDetected");
             return resultJson;
         }
         resultJson.setOperation("NoFace");
         return resultJson;
     }
-    public byte[] detctFace(byte[] imageCapture) {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        // Convert the byte[] imageData to a Mat object
-        Mat frame = Imgcodecs.imdecode(new MatOfByte(imageCapture), Imgcodecs.IMREAD_COLOR);
-
-        // Convert the frame to grayscale
-        Mat grayFrame = new Mat();
-        Imgproc.cvtColor(frame, grayFrame, Imgproc.COLOR_BGR2GRAY);
-
-        // Load the face cascade classifier
-        CascadeClassifier faceCascade = new CascadeClassifier("src\\PreTrainData\\haarcascade_frontalface_default.xml");
-        // Detect faces in the grayscale frame
-        MatOfRect faces = new MatOfRect();
-        faceCascade.detectMultiScale(grayFrame, faces);     
-        
-        MatOfByte faceImageData = new MatOfByte();
-        Imgcodecs.imencode(".jpg", grayFrame, faceImageData);
-        imageCapture = faceImageData.toArray();
-        // Check if a face is detected
-        if (faces.toArray().length > 0) {
-
-            // Encode the face image to JPEG
-            Rect faceRect = faces.toArray()[0]; // Assuming only one face is detected
-
-            // Crop the face region from the gray frame
-            Mat faceImage = new Mat(grayFrame, faceRect); // Crop from the grayscale frame   
-            Size resizedSize = new Size(256, 256); // Adjust the size as needed
-            Imgproc.resize(faceImage, faceImage, resizedSize);
-            // Encode the face image to JPEG
-            Imgcodecs.imencode(".jpg", faceImage, faceImageData);
-            imageCapture = faceImageData.toArray();            
-            return imageCapture;
-           
-        }
-        return null;
-    }
+   
     public double compareImages(byte[] image1, byte[] image2) {
         // Load OpenCV library
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
