@@ -5,18 +5,8 @@
 package facial_regconition_server;
 
 import com.google.gson.Gson;
-import crud.AccountCRUD;
 import crud.ImageCRUD;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
-import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JTextField;
 import model.OperationJson;
 import model.UserImages;
 import utils.EncodeDecode;
@@ -87,7 +77,6 @@ public class ImageThreadHandle {
         OperationJson resultJson=new OperationJson();
         // Check if a face is detected
         if (faces != null) {  
-            double min = 0;
             double max = 0;
             List<UserImages> allUserImages = imageCRUD.getAllUserImages();            
             // Compare the captured face with all user images
@@ -98,21 +87,15 @@ public class ImageThreadHandle {
                 double similarity = compareImages(faces, image);
                 resultJson.setData(sendDetectDisplayToClient(faces, image, similarity));
                 // Định mức so sánh
-                double threshold = 0.5; 
-                if(min == 0)
-                    min = similarity;
-                else if( max == 0)
+                double threshold = 0.9;
+                if( max == 0)
                     max = similarity;
-                else if(similarity < min){
-                    max = min;
-                    min = similarity;
-                }
-                else if(similarity > max){
+                else if(similarity > max)
                     max = similarity;
-                }
                 // Check if the similarity is above the threshold
-                if (max >= threshold) {
+                if (similarity >= threshold) {
                     resultJson.setOperation("Detected");
+                    return resultJson;
                 }
             }      
             resultJson.setOperation("NotDetected");
