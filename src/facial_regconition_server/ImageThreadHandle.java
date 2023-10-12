@@ -5,8 +5,10 @@
 package facial_regconition_server;
 
 import com.google.gson.Gson;
+import crud.AccountCRUD;
 import crud.ImageCRUD;
 import java.util.List;
+import model.Account;
 import model.OperationJson;
 import model.UserImages;
 import utils.EncodeDecode;
@@ -27,10 +29,12 @@ import org.opencv.objdetect.CascadeClassifier;
 public class ImageThreadHandle {
     private final ImageCRUD imageCRUD;
     private final Gson gson;
+    private AccountCRUD acc;
 
     public ImageThreadHandle() {
         this.imageCRUD = new ImageCRUD();
-        gson=new Gson();
+        gson = new Gson();
+        acc = new AccountCRUD();
     }
     
     
@@ -93,7 +97,9 @@ public class ImageThreadHandle {
                 }                    
                 else if(similarity > max){
                     max = similarity;
+                    Account account = acc.getUser(userImage.getID_User());
                     dataFace = userImage.getImages();
+                    
                 }                    
                 // Check if the similarity is above the threshold
                 if (similarity >= threshold) {

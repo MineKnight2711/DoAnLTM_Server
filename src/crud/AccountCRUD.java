@@ -92,6 +92,33 @@ public class AccountCRUD {
         }
         return null; 
     }
+    
+    public Account getUser(String idUsser) {
+        String query = "SELECT * FROM user WHERE ID_User = ?";
+        try (PreparedStatement statement = con.prepareStatement(query)) {
+            statement.setString(1, idUsser);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    Account user = new Account();
+                    user.setID_User(resultSet.getString("ID_User"));
+                    user.setAccount(resultSet.getString("Account"));
+                    user.setFrist_Name(resultSet.getString("First_Name"));
+                    user.setLast_Name(resultSet.getString("Last_Name"));
+                    user.setBrithday(resultSet.getDate("Brithday"));
+                    user.setGender(resultSet.getString("Gender"));
+                    user.setPhone(resultSet.getString("Phone"));
+                    user.setAddress(resultSet.getString("Address"));
+                    user.setEmail(resultSet.getString("Email"));
+
+                    return user;
+                }
+            }
+        } catch (SQLException ex) {
+            return null;
+        }
+        return null; 
+    }
+    
     public boolean updateInfo(Account acc){
         try{
             String query = String.format("UPDATE user SET First_Name = '%s', Last_Name = '%s', Brithday = '%s', Gender = '%s', Phone = '%s', Address = '%s', Email = '%s' WHERE Account = '%s'",
