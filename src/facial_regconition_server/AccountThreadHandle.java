@@ -115,4 +115,17 @@ public class AccountThreadHandle {
             return EncodeDecode.encodeToBase64("WrongOldOrNewPass"); 
         }
     }
+
+    public String getAccount(String idUser) {
+        Account acc=accountCRUD.getUser(idUser);
+        OperationJson sendJson=new OperationJson();
+        if(acc!=null){
+            
+            sendJson.setOperation("Success");
+            sendJson.setData(EncodeDecode.encodeToBase64(gson.toJson(acc)));
+            return gson.toJson(sendJson);
+        }
+        sendJson.setOperation("NotFound");
+        return gson.toJson(sendJson);
+    }
 }
