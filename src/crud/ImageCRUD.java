@@ -89,7 +89,7 @@ public class ImageCRUD {
     }
     public List<UserImages> getAllUserImages() {
         List<UserImages> allUser = new ArrayList<>();
-        String query = "SELECT * FROM user_image";
+        String query = "SELECT * FROM user_image ORDER BY ID_User DESC";
         ResultSet rs = Query(query);
         try{
             while (rs.next()){

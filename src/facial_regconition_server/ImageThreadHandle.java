@@ -133,8 +133,8 @@ public class ImageThreadHandle {
         return similarity;
     }
     public String sendDetectDisplayToClient(byte[] image1, byte[] image2, double simularity) {         
-        String encodeImage1=gson.toJson(image1);
-        String encodeImage2=gson.toJson(image2);
+        String encodeImage1 = gson.toJson(image1);
+        String encodeImage2 = gson.toJson(image2);
         String encodeSimularity=gson.toJson(simularity);
         return encodeImage1+"@"+encodeImage2+"@"+encodeSimularity;
     }
