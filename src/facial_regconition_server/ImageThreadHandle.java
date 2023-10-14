@@ -69,7 +69,6 @@ public class ImageThreadHandle {
     }
     public OperationJson facialRecognition(byte[] imageCapture) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        byte[] faceUndetected = null;
         byte[] faceDetected = null;
         OperationJson resultJson=new OperationJson();
         UserImages accountImage=new UserImages();
@@ -82,40 +81,34 @@ public class ImageThreadHandle {
             // Tạo vòng lặp để so sánh với tất cả khuôn mặt hiên có 
             for (UserImages userImage : allUserImages) {
 //                // Convert the user image to a matrix
-//                byte[] image = userImage.getImages();
-
-                // Compare the similarity of the captured face and user image
-                double similarity = compareImages(imageCapture, userImage.getImages());
-
+                double similarity = compareImages(imageCapture, userImage.getImages());               
+                if(maxSimilarity == 0){
+                    maxSimilarity = similarity;
+                    faceDetected = userImage.getImages();
+                    if (similarity >= threshold) {                        
+                        accountImage=userImage;
+                    }
+                    continue;                    
+                }
                 // Check if similarity is greater than the current maxSimilarity
                 if (similarity > maxSimilarity) {
                     // Update maxSimilarity and set the corresponding face
                     maxSimilarity = similarity;
+                    faceDetected = userImage.getImages();
                     if (similarity >= threshold) {
-                        //Gán khuôn mặt giống nhất
-                        faceDetected = userImage.getImages();
+                        //Gán khuôn mặt giống nhất                        
                         accountImage=userImage;
-                    } else {
-                        //Gán mặt giống nhất nhưng chưa phải mặt của người dùng
-                        faceUndetected = userImage.getImages();
-                    }
-                }
-
-                // Check if the similarity is above the threshold
-                if (similarity >= threshold) {
-                    resultJson.setData(sendDetectDisplayToClient(imageCapture, userImage.getImages(), similarity,userImage.getID_User()));
-                    resultJson.setOperation("Detected");
-                    return resultJson;
+                    } 
                 }
             }
-            // Set the appropriate face based on maxSimilarity
-            if (maxSimilarity >= threshold) {
+            if(maxSimilarity >= threshold){
                 resultJson.setData(sendDetectDisplayToClient(imageCapture, faceDetected, maxSimilarity,accountImage.getID_User()));
                 resultJson.setOperation("Detected");
-            } else {
-                resultJson.setData(sendDetectDisplayToClient(imageCapture, faceUndetected, maxSimilarity,"NotFound"));
-                resultJson.setOperation("NotDetected");
             }
+            if(maxSimilarity < threshold){
+                resultJson.setData(sendDetectDisplayToClient(imageCapture, faceDetected, maxSimilarity,"NotFound"));
+                resultJson.setOperation("NotDetected");
+            }                
             return resultJson;
         }
         resultJson.setOperation("NoFace");
