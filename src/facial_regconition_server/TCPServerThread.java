@@ -37,6 +37,16 @@ public class TCPServerThread extends Thread {
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
         ) {
+            if(in.readLine().equals("Connect"))
+            {
+                out.println("Success");
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return;
+            }
             OperationJson receivedJson = gson.fromJson(in.readLine(), OperationJson.class);
             System.out.println("JSOn nhận được :"+receivedJson.getOperation());
             String operation=receivedJson.getOperation();

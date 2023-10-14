@@ -8,7 +8,6 @@ import com.google.gson.Gson;
 import crud.AccountCRUD;
 import crud.ImageCRUD;
 import java.util.List;
-import model.Account;
 import model.OperationJson;
 import model.UserImages;
 import utils.EncodeDecode;
@@ -24,12 +23,10 @@ import org.opencv.imgcodecs.Imgcodecs;
 public class ImageThreadHandle {
     private final ImageCRUD imageCRUD;
     private final Gson gson;
-    private AccountCRUD acc;
 
     public ImageThreadHandle() {
         this.imageCRUD = new ImageCRUD();
         gson = new Gson();
-        acc = new AccountCRUD();
     }
     
     
