@@ -5,7 +5,6 @@
 package facial_regconition_server;
 
 import com.google.gson.Gson;
-import crud.AccountCRUD;
 import crud.ImageCRUD;
 import java.util.List;
 import model.OperationJson;
@@ -72,7 +71,7 @@ public class ImageThreadHandle {
         byte[] faceDetected = null;
         OperationJson resultJson=new OperationJson();
         UserImages accountImage=new UserImages();
-        // Check if a face is detected
+        // Kiểm tra khuôn mặt có phát hiện hay không
         if (imageCapture != null) {  
             double maxSimilarity = 0;
             // Định mức so sánh
@@ -80,7 +79,6 @@ public class ImageThreadHandle {
             List<UserImages> allUserImages = imageCRUD.getAllUserImages();            
             // Tạo vòng lặp để so sánh với tất cả khuôn mặt hiên có 
             for (UserImages userImage : allUserImages) {
-//                // Convert the user image to a matrix
                 double similarity = compareImages(imageCapture, userImage.getImages());               
                 if(maxSimilarity == 0){
                     maxSimilarity = similarity;
@@ -90,7 +88,7 @@ public class ImageThreadHandle {
                     }
                     continue;                    
                 }
-                // Check if similarity is greater than the current maxSimilarity
+                // kiểm tra liên tục xem similarity hiện tiện có lớn hơn maxSimilarity hay không
                 if (similarity > maxSimilarity) {
                     // Update maxSimilarity and set the corresponding face
                     maxSimilarity = similarity;
