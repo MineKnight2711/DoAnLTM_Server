@@ -56,6 +56,9 @@ public class TCPServerThread extends Thread {
                     case "regconition":
                         handleRegconition(data, out);
                         break;    
+                    case "get-account":
+                        handleGetAccount(data, out);
+                        break; 
                     default:
                         handleOtherOperations(operation, data, out);
                         break;
@@ -145,7 +148,11 @@ public class TCPServerThread extends Thread {
     private void handleRegconition(String data, PrintWriter out) {
         byte[] imageReceived=gson.fromJson(data, byte[].class);
         OperationJson result=imageThreadHandle.facialRecognition(imageReceived);
-        System.out.println("Ket qua nhan dien ::"+result.getOperation());
         out.println(EncodeDecode.encodeToBase64(gson.toJson(result)));
+    }
+
+    private void handleGetAccount(String data, PrintWriter out) {
+        String result = accountThreadHandle.getAccount(data);
+        out.println(EncodeDecode.encodeToBase64(result));
     }
 }

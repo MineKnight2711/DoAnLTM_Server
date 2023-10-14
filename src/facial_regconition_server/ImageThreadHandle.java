@@ -15,12 +15,7 @@ import utils.EncodeDecode;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
-import org.opencv.core.MatOfRect;
-import org.opencv.core.Rect;
-import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.objdetect.CascadeClassifier;
 
 /**
  *
@@ -77,39 +72,46 @@ public class ImageThreadHandle {
     }
     public OperationJson facialRecognition(byte[] imageCapture) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        byte[] dataFace = null;
+        byte[] faceDetected = null;
         OperationJson resultJson=new OperationJson();
+        UserImages accountImage=new UserImages();
         // Check if a face is detected
         if (imageCapture != null) {  
-            double max = 0;
+            double maxSimilarity = 0;
+            // Định mức so sánh
+            double threshold = 0.88;
             List<UserImages> allUserImages = imageCRUD.getAllUserImages();            
-            // Compare the captured face with all user images
-            for (UserImages userImage : allUserImages) {                
-                // Convert the user image to a matrix
-                byte[] image = userImage.getImages();
-                // Compare the similarity of the captured face and user image
-                double similarity = compareImages(imageCapture, image);                
-                // Định mức so sánh
-                double threshold = 0.88;
-                if( max == 0){
-                    max = similarity;
-                    dataFace = userImage.getImages();
-                }                    
-                else if(similarity > max){
-                    max = similarity;
-                    Account account = acc.getUser(userImage.getID_User());
-                    dataFace = userImage.getImages();
-                    
-                }                    
-                // Check if the similarity is above the threshold
-                if (similarity >= threshold) {
-                    resultJson.setData(sendDetectDisplayToClient(imageCapture, image, similarity));
-                    resultJson.setOperation("Detected");
-                    return resultJson;
+            // Tạo vòng lặp để so sánh với tất cả khuôn mặt hiên có 
+            for (UserImages userImage : allUserImages) {
+//                // Convert the user image to a matrix
+                double similarity = compareImages(imageCapture, userImage.getImages());               
+                if(maxSimilarity == 0){
+                    maxSimilarity = similarity;
+                    faceDetected = userImage.getImages();
+                    if (similarity >= threshold) {                        
+                        accountImage=userImage;
+                    }
+                    continue;                    
                 }
-            }      
-            resultJson.setData(sendDetectDisplayToClient(imageCapture, dataFace, max));
-            resultJson.setOperation("NotDetected");
+                // Check if similarity is greater than the current maxSimilarity
+                if (similarity > maxSimilarity) {
+                    // Update maxSimilarity and set the corresponding face
+                    maxSimilarity = similarity;
+                    faceDetected = userImage.getImages();
+                    if (similarity >= threshold) {
+                        //Gán khuôn mặt giống nhất                        
+                        accountImage=userImage;
+                    } 
+                }
+            }
+            if(maxSimilarity >= threshold){
+                resultJson.setData(sendDetectDisplayToClient(imageCapture, faceDetected, maxSimilarity,accountImage.getID_User()));
+                resultJson.setOperation("Detected");
+            }
+            if(maxSimilarity < threshold){
+                resultJson.setData(sendDetectDisplayToClient(imageCapture, faceDetected, maxSimilarity,"NotFound"));
+                resultJson.setOperation("NotDetected");
+            }                
             return resultJson;
         }
         resultJson.setOperation("NoFace");
@@ -117,24 +119,33 @@ public class ImageThreadHandle {
     }
    
     public double compareImages(byte[] image1, byte[] image2) {
-        // Load OpenCV library
+        // Load thư viện OpenCV
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
-        // Convert image byte arrays to OpenCV Mat objects
+        //Chuyển đổi hình ảnh dạng byte[] sang đối tượng OpenCV Mat
         Mat mat1 = Imgcodecs.imdecode(new MatOfByte(image1), Imgcodecs.IMREAD_UNCHANGED);
         Mat mat2 = Imgcodecs.imdecode(new MatOfByte(image2), Imgcodecs.IMREAD_UNCHANGED);
        
-        // Calculate the Mean Squared Error (MSE) as a similarity measure
+        // Tính toán the sai số bình phương trung bình (MSE) dưới dạng tỉ lệ giống nhau
+        //Trong OpenCV, Sai số bình phương trung bình (MSE) là một thước đo thường được sử dụng để đo chất lượng 
+        //của việc nén hình ảnh hoặc video hoặc độ chính xác của một thuật toán xử lý hình ảnh.
         double mse = Core.norm(mat1, mat2, Core.NORM_L2) / (mat1.rows() * mat1.cols());
 
-        // Convert the MSE to a similarity score (1 - MSE)
+        //Chuyển đổi MSE thành tỉ lệ giống nhau
         double similarity = 1.0 - mse;
 
         return similarity;
     }
-    public String sendDetectDisplayToClient(byte[] image1, byte[] image2, double simularity) {         
-        String encodeImage1 = gson.toJson(image1);
-        String encodeImage2 = gson.toJson(image2);
+    public String sendDetectDisplayToClient(byte[] image1, byte[] image2, double simularity,String accountId) {         
+        if(!accountId.equals("NotFound")){
+            String encodeImage1=gson.toJson(image1);
+            String encodeImage2=gson.toJson(image2);
+            String encodeSimularity=gson.toJson(simularity);
+            String accountID=accountId;
+            return encodeImage1+"@"+encodeImage2+"@"+encodeSimularity+"@"+accountID;
+        }
+        String encodeImage1=gson.toJson(image1);
+        String encodeImage2=gson.toJson(image2);
         String encodeSimularity=gson.toJson(simularity);
         return encodeImage1+"@"+encodeImage2+"@"+encodeSimularity;
     }
