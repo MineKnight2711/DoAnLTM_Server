@@ -51,6 +51,7 @@ public class ImageThreadHandle {
         {
             sendListToClientJson.setOperation("Success");
             String encodeListToJson=gson.toJson(imagesList);
+            System.out.println("Image List:"+encodeListToJson);
             String encodeListToBase64=EncodeDecode.encodeToBase64(encodeListToJson);
             
             sendListToClientJson.setData(encodeListToBase64);

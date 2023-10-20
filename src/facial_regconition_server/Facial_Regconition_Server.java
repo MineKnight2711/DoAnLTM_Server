@@ -7,6 +7,7 @@ package facial_regconition_server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import utils.AES;
 import utils.BaseURL;
 
 /**
@@ -16,7 +17,7 @@ import utils.BaseURL;
 public class Facial_Regconition_Server {
 
    public static void main(String[] args) {
-
+        AES aes=new AES();
         try {
             ServerSocket serverSocket = new ServerSocket(BaseURL.PORT);
 
@@ -26,7 +27,7 @@ public class Facial_Regconition_Server {
 
                 System.out.println("Client connected :"+clientSocket.getInetAddress().getHostName());
 
-                Thread clientHandler = new TCPServerThread(clientSocket);
+                Thread clientHandler = new TCPServerThread(clientSocket,aes);
                 clientHandler.start();
             }
         } catch (IOException e) {

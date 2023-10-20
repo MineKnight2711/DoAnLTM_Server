@@ -124,10 +124,8 @@ public class AccountCRUD {
             String query = String.format("UPDATE user SET First_Name = '%s', Last_Name = '%s', Brithday = '%s', Gender = '%s', Phone = '%s', Address = '%s', Email = '%s' WHERE Account = '%s'",
                             acc.getFrist_Name(), acc.getLast_Name(), acc.getBrithday(), acc.getGender(), acc.getPhone(), acc.getAddress(),acc.getEmail(), acc.getAccount());
             stmt.executeUpdate(query);
-//            JOptionPane.showMessageDialog(null, "Cập nhật thông tin thành công");
             return true;
         }catch (HeadlessException | SQLException ex) {
-            JOptionPane.showMessageDialog(null, ex);
             return false;
         }
     }

@@ -25,7 +25,7 @@ public class AccountThreadHandle {
         this.accountCRUD = new AccountCRUD();
     }
     
-    public String login(String account,String password){
+    public OperationJson login(String account,String password){
         String loginResult = accountCRUD.login(account, password);
         OperationJson sendJson=new OperationJson();
 
@@ -33,8 +33,7 @@ public class AccountThreadHandle {
             case "Success":
                 Account acc=accountCRUD.getAccount(account);
                 sendJson.setOperation("Success");
-                String encodedAccount=EncodeDecode.encodeToBase64(gson.toJson(acc));
-                sendJson.setData(encodedAccount);
+                sendJson.setData(gson.toJson(acc));
                 break;
             case "WrongPass":
                 sendJson.setOperation("WrongPass");
@@ -50,7 +49,7 @@ public class AccountThreadHandle {
                 break;
         }
 
-        return gson.toJson(sendJson);   
+        return sendJson;   
     }
     public String createNewUser(String data){
         OperationJson sendJson=new OperationJson();
@@ -83,37 +82,50 @@ public class AccountThreadHandle {
         }
     }
 
-    public String updateAccount(String account) {
+    public OperationJson updateAccount(String account) {
+        OperationJson resultUpdateJson=new OperationJson();
         try {
-//            System.out.println(data);
+            
             Account receivedAccount=gson.fromJson(account, Account.class);
             java.sql.Date birthday = new java.sql.Date(receivedAccount.getBrithday().getTime());
             receivedAccount.setBrithday(birthday);
             if(accountCRUD.updateInfo(receivedAccount))
             {
-                return EncodeDecode.encodeToBase64("Success");
+                Account updatedAccount=accountCRUD.getUser(receivedAccount.getID_User());
+                resultUpdateJson.setOperation("Success");
+                resultUpdateJson.setData(gson.toJson(updatedAccount));
             }
             else
             {
-                return EncodeDecode.encodeToBase64("UpdateFail");
+                resultUpdateJson.setOperation("UpdateFail");
+                
             }
         } catch (JsonSyntaxException e) {
-            return EncodeDecode.encodeToBase64("DateTimeFormat");
+            resultUpdateJson.setOperation("DateTimeFormat");
         }
+        return resultUpdateJson;
     }
 
-    public String changePass(String account, String encodedPassword) {
-        String decodePassword = EncodeDecode.decodeBase64FromJson(encodedPassword);
+    public OperationJson changePass(String account, String encodedPassword) {
+        OperationJson resultJson=new OperationJson();
+        String decodePassword = encodedPassword;
         String[] oldAndNewpass = decodePassword.split("-");
         System.out.println("Mật khẩu cũ :"+oldAndNewpass[0]+"Mật khẩu mới :"+oldAndNewpass[1]);
-        String result;
         if(oldAndNewpass.length==2){
-            result=EncodeDecode.encodeToBase64(accountCRUD.changePassword(account, oldAndNewpass[0], oldAndNewpass[1]));
-            return result;
+            String result =accountCRUD.changePassword(account, oldAndNewpass[0], oldAndNewpass[1]);
+            if(result.equals("Success"))
+            {
+                resultJson.setOperation("Success");
+            }
+            else
+            {
+                resultJson.setOperation(result);
+            }
         }
         else{
-            return EncodeDecode.encodeToBase64("WrongOldOrNewPass"); 
+            resultJson.setOperation("MissingField");
         }
+        return resultJson;
     }
 
     public String getAccount(String idUser) {

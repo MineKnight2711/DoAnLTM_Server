@@ -10,7 +10,16 @@ package model;
  */
 public class OperationJson {
     private String operation;
+    private String publicKey;
     private Object data;
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public void setPublicKey(String publicKey) {
+        this.publicKey = publicKey;
+    }
     
     public String getOperation() {
         return operation;
