@@ -57,7 +57,7 @@ public class TCPServerThread extends Thread {
                         out.println(publicKeyString);  
                         break;
                     case "create":
-                        handleCreate(data, out);
+                        handleCreate(receivedJson, out);
                         break;
                     case "update":
                         handleUpdate(receivedJson, out);
@@ -66,7 +66,7 @@ public class TCPServerThread extends Thread {
                         handleRegconition(data, out);
                         break;    
                     case "get-account":
-                        handleGetAccount(data, out);
+                        handleGetAccount(receivedJson, out);
                         break; 
                     default:
                         handleOtherOperations(receivedJson, out);
@@ -86,9 +86,23 @@ public class TCPServerThread extends Thread {
             }
         }
     }
-    private void handleCreate(String data, PrintWriter out) {
-        String responseCreate = accountThreadHandle.createNewUser(data);
-        out.println(responseCreate);
+    private void handleCreate(OperationJson data, PrintWriter out) {
+        try {
+            System.out.println("Account nhan"+data.getData().toString());
+            String decryptAccount=aes.decrypt(data.getData().toString(), aes.getPrivateKey());
+            OperationJson responseCreate = accountThreadHandle.createNewUser(decryptAccount);
+            if(responseCreate.getOperation().equals("Success")){
+                String encryptUpdatedAccount=aes.encrypt(responseCreate.getData().toString(), aes.getPublicKeyFromString(data.getPublicKey()));
+                 System.out.println("Account ma hoa"+encryptUpdatedAccount);
+                responseCreate.setData(encryptUpdatedAccount);
+                out.println(gson.toJson(responseCreate));
+            }
+            else{
+                out.println(gson.toJson(responseCreate));
+            }
+        } catch (Exception ex) {
+            System.out.println("Error"+ex.toString());
+        }
     }
 
     private void handleUpdate(OperationJson data, PrintWriter out) {
@@ -183,8 +197,21 @@ public class TCPServerThread extends Thread {
         out.println(EncodeDecode.encodeToBase64(gson.toJson(result)));
     }
 
-    private void handleGetAccount(String data, PrintWriter out) {
-        String result = accountThreadHandle.getAccount(data);
-        out.println(EncodeDecode.encodeToBase64(result));
+    private void handleGetAccount(OperationJson data, PrintWriter out) {
+        try {
+            String decodePassword = aes.decrypt(data.getData().toString(), aes.getPrivateKey());
+            OperationJson responseGetAccount = accountThreadHandle.getAccount(decodePassword);
+            if(responseGetAccount.getOperation().equals("Success")){
+                PublicKey publicKey = aes.getPublicKeyFromString(data.getPublicKey());
+                String encryptAccount=aes.encrypt(responseGetAccount.getData().toString(), publicKey);
+                responseGetAccount.setData(encryptAccount);
+                out.println(gson.toJson(responseGetAccount));
+            }
+            else{
+                out.println(gson.toJson(responseGetAccount));
+            }
+        } catch (Exception ex) {
+            System.out.println("Error"+ex.toString());
+        }
     }
 }
