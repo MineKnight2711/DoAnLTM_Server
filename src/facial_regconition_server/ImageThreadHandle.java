@@ -29,18 +29,22 @@ public class ImageThreadHandle {
     }
     
     
-    public String saveImage(String accountID,List<byte[]> images){
+    public OperationJson saveImage(String accountID,List<byte[]> images){
+        OperationJson resultJson=new OperationJson();
         if(!accountID.isEmpty()){
             if(!images.isEmpty()){
                 for(byte[] image : images)
                 {
                     imageCRUD.saveImage(accountID, image);
                 }
-                return "Success";
+                resultJson.setOperation("Success");
+                return resultJson;
             }
-            return "EmptyList";
+            resultJson.setOperation("EmptyList");
+            return resultJson;
         }
-        return "Fail";
+        resultJson.setOperation("AccountNotFound");
+        return resultJson;
     }
     
 
@@ -51,21 +55,21 @@ public class ImageThreadHandle {
         {
             sendListToClientJson.setOperation("Success");
             String encodeListToJson=gson.toJson(imagesList);
-            System.out.println("Image List:"+encodeListToJson);
-            String encodeListToBase64=EncodeDecode.encodeToBase64(encodeListToJson);
-            
-            sendListToClientJson.setData(encodeListToBase64);
+            sendListToClientJson.setData(encodeListToJson);
             return sendListToClientJson;
         }
         sendListToClientJson.setOperation("NoImage");
         return sendListToClientJson;
     }
-    public String deleteImage(String imageID) {
+    public OperationJson deleteImage(String imageID) {
+        OperationJson resultJson=new OperationJson();
         if(imageCRUD.deleteUserImage(imageID))
         {
-            return EncodeDecode.encodeToBase64("Success");
+            resultJson.setOperation("Success");
+            return resultJson;
         }
-        return EncodeDecode.encodeToBase64("Fail");
+        resultJson.setOperation("CannotDeleteImage");
+        return resultJson;
     }
     public OperationJson facialRecognition(byte[] imageCapture) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);

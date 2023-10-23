@@ -51,12 +51,11 @@ public class AccountThreadHandle {
 
         return sendJson;   
     }
-    public String createNewUser(String data){
+    public OperationJson createNewUser(String account){
         OperationJson sendJson=new OperationJson();
         try {
-            System.out.println(data);
-            String decodeRequest=EncodeDecode.decodeBase64FromJson(data);
-            Account receivedAccount=gson.fromJson(decodeRequest, Account.class);
+            System.out.println("Account nhan "+account);
+            Account receivedAccount=gson.fromJson(account, Account.class);
             java.sql.Date birthday = new java.sql.Date(receivedAccount.getBrithday().getTime());
             receivedAccount.setBrithday(birthday);
             if(accountCRUD.createNewAccount(receivedAccount))
@@ -65,20 +64,20 @@ public class AccountThreadHandle {
                 if(getAccount!=null){
                     sendJson.setOperation("Success");
                     sendJson.setData(gson.toJson(getAccount));
-                    return EncodeDecode.encodeToBase64(gson.toJson(sendJson));
+                    return sendJson;
                 }
                 sendJson.setOperation("AccountNotFound");
-                return EncodeDecode.encodeToBase64(gson.toJson(sendJson));
+                return sendJson;
             }
             else
             {
                 sendJson.setOperation("CreateAccountFail");
-                return EncodeDecode.encodeToBase64(gson.toJson(sendJson));
+                return sendJson;
             }
         } catch (JsonSyntaxException e) {
             System.out.println("Lỗi định dạng ngày"+e.toString());
             sendJson.setOperation("DateTimeFormat");
-            return EncodeDecode.encodeToBase64(gson.toJson(sendJson));
+            return sendJson;
         }
     }
 
@@ -128,16 +127,16 @@ public class AccountThreadHandle {
         return resultJson;
     }
 
-    public String getAccount(String idUser) {
+    public OperationJson getAccount(String idUser) {
         Account acc=accountCRUD.getUser(idUser);
         OperationJson sendJson=new OperationJson();
         if(acc!=null){
             
             sendJson.setOperation("Success");
-            sendJson.setData(EncodeDecode.encodeToBase64(gson.toJson(acc)));
-            return gson.toJson(sendJson);
+            sendJson.setData(gson.toJson(acc));
+            return sendJson;
         }
         sendJson.setOperation("NotFound");
-        return gson.toJson(sendJson);
+        return sendJson;
     }
 }

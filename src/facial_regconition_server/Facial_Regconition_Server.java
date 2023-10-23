@@ -22,7 +22,7 @@ public class Facial_Regconition_Server {
             ServerSocket serverSocket = new ServerSocket(BaseURL.PORT);
 
             while (true) {
-                System.out.println("Waiting for a client...");
+                System.out.println("Server dang chay tren cong "+BaseURL.PORT+" ...");
                 Socket clientSocket = serverSocket.accept();
 
                 System.out.println("Client connected :"+clientSocket.getInetAddress().getHostName());
