@@ -12,8 +12,6 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.security.PublicKey;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import model.OperationJson;
 import utils.EncodeDecode;
 import utils.AES;
@@ -68,6 +66,13 @@ public class TCPServerThread extends Thread {
                     case "get-account":
                         handleGetAccount(receivedJson, out);
                         break; 
+                    case "load-image":
+                        handleLoadImage(receivedJson, out);
+                        break;    
+                    case "delete-image":
+                        handleDeleteImage(receivedJson, out);
+                        break;
+                        
                     default:
                         handleOtherOperations(receivedJson, out);
                         break;
@@ -136,11 +141,7 @@ public class TCPServerThread extends Thread {
             handleLogin(pathVariables, request, out);
         } else if (request.getOperation().startsWith("change-password/")) {
             handleChangePassword(pathVariables, request, out);
-        } else if (request.getOperation().startsWith("load-image/")) {
-            handleLoadImage(pathVariables, out);
-        } else if(request.getOperation().startsWith("delete-image/")){
-            handleDeleteImage(pathVariables, out);
-        }else {
+        } else {
             out.println(EncodeDecode.encodeToBase64("UnsupportedOperation"));
         }
     }
@@ -180,15 +181,35 @@ public class TCPServerThread extends Thread {
         }
     }
 
-    private void handleLoadImage(String accountID, PrintWriter out) {
-        OperationJson result = imageThreadHandle.loadImage(accountID);
-        out.println(gson.toJson(result));
+    private void handleLoadImage(OperationJson request, PrintWriter out) {
+        
+        try {
+            String accountIDDecrypt=aes.decrypt(request.getData().toString(), aes.getPrivateKey());
+            OperationJson resultJson = imageThreadHandle.loadImage(accountIDDecrypt);
+            if(resultJson.getOperation().equals("Success"))
+            {
+                PublicKey publicKey = aes.getPublicKeyFromString(request.getPublicKey());
+                String encryptListImage=aes.encrypt(resultJson.getData().toString(), publicKey);
+                System.out.println("List anh ma hoa::::"+encryptListImage);
+                resultJson.setData(encryptListImage);
+                out.println(gson.toJson(resultJson));
+            }
+            else{
+                out.println(gson.toJson(resultJson));
+            }
+            
+        } catch (Exception ex) {
+            System.out.println("Error"+ex.toString());
+        }
     }
-    private void handleDeleteImage(String imageID, PrintWriter out) {
-        System.out.println("ID ảnh :" + imageID);
-        String result = imageThreadHandle.deleteImage(imageID);
-        System.out.println("Ket qua tra ve :" + result);
-        out.println(result);
+    private void handleDeleteImage(OperationJson request, PrintWriter out) {
+        try {
+            String decryptImageId=aes.decrypt(request.getData().toString(), aes.getPrivateKey());
+            OperationJson resultDeleteJson = imageThreadHandle.deleteImage(decryptImageId);
+            out.println(gson.toJson(resultDeleteJson));
+        } catch (Exception ex) {
+            System.out.println("Error"+ex.toString());
+        }
     }
 
     private void handleRegconition(String data, PrintWriter out) {
