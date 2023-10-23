@@ -42,6 +42,7 @@ public class TCPServerThread extends Thread {
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
         ) {
             OperationJson receivedJson = gson.fromJson(in.readLine(), OperationJson.class);
+//            System.out.println("Request nhận ::"+gson.toJson(receivedJson));
             String operation=receivedJson.getOperation();
         if (!operation.isEmpty()) {
             String data="";
@@ -50,6 +51,9 @@ public class TCPServerThread extends Thread {
                 data=receivedJson.getData().toString();
             }
             switch (operation) {
+                    case "EstablishConnection":
+                        out.println("OK");  
+                        break;
                     case "GET_PUBLIC_KEY":
                         String publicKeyString = aes.encodePublicKey(aes.getPublicKey());
                         out.println(publicKeyString);  
@@ -71,8 +75,6 @@ public class TCPServerThread extends Thread {
                         break;    
                     case "delete-image":
                         handleDeleteImage(receivedJson, out);
-                        break;
-                        
                     default:
                         handleOtherOperations(receivedJson, out);
                         break;
@@ -129,34 +131,42 @@ public class TCPServerThread extends Thread {
     }
 
     private void handleOtherOperations(OperationJson request, PrintWriter out) {
-        String[] operationParts = request.getOperation().split("/");
+        String[] operationParts = request.getOperation().split("@");
         if (operationParts.length != 2) {
             out.println(EncodeDecode.encodeToBase64("Account not found"));
             return;
         }
         String pathVariables = operationParts[1];
-        if (request.getOperation().startsWith("save-image/")) {
-            handleSaveImage(pathVariables, request, out);
-        } else if (request.getOperation().startsWith("login/")) {
+        if (request.getOperation().startsWith("save-image")) {
+            handleSaveImage(pathVariables,request, out);
+        } else if (request.getOperation().startsWith("login")) {
             handleLogin(pathVariables, request, out);
-        } else if (request.getOperation().startsWith("change-password/")) {
+        } else if (request.getOperation().startsWith("change-password")) {
             handleChangePassword(pathVariables, request, out);
         } else {
             out.println(EncodeDecode.encodeToBase64("UnsupportedOperation"));
         }
     }
 
-    private void handleSaveImage(String accountID, OperationJson data, PrintWriter out) {
-        List<byte[]> receiveImages = gson.fromJson(data.getData().toString(),new TypeToken<List<byte[]>>() {}.getType());
-        String responseImage = imageThreadHandle.saveImage(accountID, receiveImages);
-        out.println(EncodeDecode.encodeToBase64(responseImage));
+    private void handleSaveImage(String accountID,OperationJson request, PrintWriter out) {
+        try {
+            String decryptedAccountId=aes.decrypt(accountID, aes.getPrivateKey());
+            String decryptedListImage=aes.decrypt(request.getData().toString(), aes.getPrivateKey());
+            System.out.println("Account id nhận ::"+decryptedAccountId+"\n"+decryptedListImage);
+            List<byte[]> receiveImages = gson.fromJson(decryptedListImage,new TypeToken<List<byte[]>>() {}.getType());
+            OperationJson resultJson = imageThreadHandle.saveImage(decryptedAccountId, receiveImages);
+            out.println(gson.toJson(resultJson));
+        } catch (Exception ex) {
+            System.out.println("Error"+ex.toString());
+        }
     }
 
     private void handleLogin(String accountID, OperationJson data, PrintWriter out) {
         try {
             
-            String decodePassword = aes.decrypt(data.getData().toString(), aes.getPrivateKey());
-            OperationJson responseLogin = accountThreadHandle.login(accountID, decodePassword);
+            String decryptPassword = aes.decrypt(data.getData().toString(), aes.getPrivateKey());
+            String decryptAccountID = aes.decrypt(accountID, aes.getPrivateKey());
+            OperationJson responseLogin = accountThreadHandle.login(decryptAccountID, decryptPassword);
             if(responseLogin.getOperation().equals("Success")){
                 PublicKey publicKey = aes.getPublicKeyFromString(data.getPublicKey());
                 String encryptAccount=aes.encrypt(responseLogin.getData().toString(), publicKey);
@@ -173,8 +183,9 @@ public class TCPServerThread extends Thread {
 
     private void handleChangePassword(String accountID, OperationJson data, PrintWriter out) {
         try {
-            String decodePassword = aes.decrypt(data.getData().toString(), aes.getPrivateKey());
-            OperationJson resultChangePassJson = accountThreadHandle.changePass(accountID, decodePassword);
+            String decryptPassword = aes.decrypt(data.getData().toString(), aes.getPrivateKey());
+            String decryptAccountID = aes.decrypt(accountID, aes.getPrivateKey());
+            OperationJson resultChangePassJson = accountThreadHandle.changePass(decryptAccountID, decryptPassword);
             out.println(gson.toJson(resultChangePassJson));
         } catch (Exception ex) {
             System.out.println("Error"+ex.toString());

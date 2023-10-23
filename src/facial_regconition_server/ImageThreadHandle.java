@@ -29,18 +29,22 @@ public class ImageThreadHandle {
     }
     
     
-    public String saveImage(String accountID,List<byte[]> images){
+    public OperationJson saveImage(String accountID,List<byte[]> images){
+        OperationJson resultJson=new OperationJson();
         if(!accountID.isEmpty()){
             if(!images.isEmpty()){
                 for(byte[] image : images)
                 {
                     imageCRUD.saveImage(accountID, image);
                 }
-                return "Success";
+                resultJson.setOperation("Success");
+                return resultJson;
             }
-            return "EmptyList";
+            resultJson.setOperation("EmptyList");
+            return resultJson;
         }
-        return "Fail";
+        resultJson.setOperation("AccountNotFound");
+        return resultJson;
     }
     
 
