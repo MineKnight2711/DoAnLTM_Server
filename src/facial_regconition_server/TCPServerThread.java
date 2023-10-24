@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import model.OperationJson;
-import utils.EncodeDecode;
 import utils.AES;
 
 
@@ -135,7 +134,7 @@ public class TCPServerThread extends Thread {
     private void handleOtherOperations(OperationJson request, PrintWriter out) {
         String[] operationParts = request.getOperation().split("@");
         if (operationParts.length != 2) {
-            out.println(EncodeDecode.encodeToBase64("Account not found"));
+            System.err.println("Lỗi request");
             return;
         }
         String pathVariables = operationParts[1];
@@ -146,7 +145,7 @@ public class TCPServerThread extends Thread {
         } else if (request.getOperation().startsWith("change-password")) {
             handleChangePassword(pathVariables, request, out);
         } else {
-            out.println(EncodeDecode.encodeToBase64("UnsupportedOperation"));
+            System.err.println("Lỗi request");
         }
     }
 

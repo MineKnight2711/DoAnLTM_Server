@@ -11,13 +11,13 @@ import java.util.Base64;
  *
  * @author WitherDragon
  */
-public class EncodeDecode {
-    public static String decodeBase64FromJson(String json){
-        String base64EncodedData = json;
-        byte[] decodedData = Base64.getDecoder().decode(base64EncodedData);
-        return new String(decodedData, StandardCharsets.UTF_8);
-    }
-    public static String encodeToBase64(String data){
-        return Base64.getEncoder().encodeToString(data.getBytes());
-    }
-}
+//public class EncodeDecode {
+//    public static String decodeBase64FromJson(String json){
+//        String base64EncodedData = json;
+//        byte[] decodedData = Base64.getDecoder().decode(base64EncodedData);
+//        return new String(decodedData, StandardCharsets.UTF_8);
+//    }
+//    public static String encodeToBase64(String data){
+//        return Base64.getEncoder().encodeToString(data.getBytes());
+//    }
+//}
