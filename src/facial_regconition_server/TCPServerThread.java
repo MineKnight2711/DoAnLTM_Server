@@ -12,6 +12,8 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.security.PublicKey;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import model.OperationJson;
 import utils.EncodeDecode;
 import utils.AES;
@@ -64,8 +66,8 @@ public class TCPServerThread extends Thread {
                     case "update":
                         handleUpdate(receivedJson, out);
                         break;
-                    case "regconition":
-                        handleRegconition(data, out);
+                    case "recognition":
+                        handleRegconition(receivedJson, out);
                         break;    
                     case "get-account":
                         handleGetAccount(receivedJson, out);
@@ -195,6 +197,7 @@ public class TCPServerThread extends Thread {
     private void handleLoadImage(OperationJson request, PrintWriter out) {
         
         try {
+            
             String accountIDDecrypt=aes.decrypt(request.getData().toString(), aes.getPrivateKey());
             OperationJson resultJson = imageThreadHandle.loadImage(accountIDDecrypt);
             if(resultJson.getOperation().equals("Success"))
@@ -223,10 +226,27 @@ public class TCPServerThread extends Thread {
         }
     }
 
-    private void handleRegconition(String data, PrintWriter out) {
-        byte[] imageReceived=gson.fromJson(data, byte[].class);
-        OperationJson result=imageThreadHandle.facialRecognition(imageReceived);
-        out.println(EncodeDecode.encodeToBase64(gson.toJson(result)));
+    private void handleRegconition(OperationJson request, PrintWriter out) {
+        try {
+//            System.out.println("Data nhan ::"+gson.toJson(request));
+            String decryptImage=aes.decrypt(request.getData().toString(), aes.getPrivateKey());
+            
+            byte[] imageReceived=gson.fromJson(decryptImage, byte[].class);
+            OperationJson resultJson=imageThreadHandle.facialRecognition(imageReceived);
+            System.out.println("REsult json ::"+gson.toJson(resultJson));
+            if(resultJson.getOperation().equals("NotDetected")||resultJson.getOperation().equals("Detected")){
+                PublicKey publicKey = aes.getPublicKeyFromString(request.getPublicKey());
+                String encryptResult=aes.encrypt(resultJson.getData().toString(), publicKey);
+
+                resultJson.setData(encryptResult);
+                
+                out.println(gson.toJson(resultJson));
+            }else{
+                out.println(gson.toJson(resultJson));
+            }
+        } catch (Exception ex) {
+            System.out.println("Error"+ex.toString());
+        }
     }
 
     private void handleGetAccount(OperationJson data, PrintWriter out) {

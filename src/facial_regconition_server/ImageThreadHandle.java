@@ -9,7 +9,6 @@ import crud.ImageCRUD;
 import java.util.List;
 import model.OperationJson;
 import model.UserImages;
-import utils.EncodeDecode;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
