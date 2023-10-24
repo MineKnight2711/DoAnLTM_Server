@@ -26,7 +26,7 @@ public class AccountThreadHandle {
     
     public OperationJson login(String account,String password){
         String loginResult = accountCRUD.login(account, password);
-        OperationJson sendJson=new OperationJson();
+        OperationJson sendJson = new OperationJson();
 
         switch (loginResult) {
             case "Success":
